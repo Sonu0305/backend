@@ -1,5 +1,5 @@
 from passlib.context import CryptContext
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 import uuid
 from .config import settings
@@ -25,13 +25,18 @@ def generate_reset_token() -> str:
 
 
 def get_token_expiration() -> datetime:
-    """Get expiration datetime for reset token"""
-    return datetime.utcnow() + timedelta(minutes=settings.TOKEN_EXPIRATION_MINUTES)
+    """Get expiration datetime for reset token (timezone-aware)"""
+    return datetime.now(timezone.utc) + timedelta(minutes=settings.TOKEN_EXPIRATION_MINUTES)
 
 
 def is_token_expired(expires_at: datetime) -> bool:
     """Check if a token has expired"""
-    return datetime.utcnow() > expires_at
+    # Make current time timezone-aware for comparison
+    current_time = datetime.now(timezone.utc)
+    # If expires_at is naive, make it aware (for backward compatibility)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    return current_time > expires_at
 
 
 def get_password_reset_html(reset_link: str, email: str) -> str:

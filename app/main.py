@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import auth
 from .database import init_db
+from .config import settings
 import logging
 
 # Configure logging
@@ -17,15 +18,30 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
+# Build list of allowed origins
+allowed_origins = [
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:3000",  # Alternative dev port
+]
+
+# Add production frontend URL if configured
+if settings.FRONTEND_URL:
+    allowed_origins.append(settings.FRONTEND_URL)
+    logger.info(f"Added FRONTEND_URL to CORS: {settings.FRONTEND_URL}")
+
+# In production, also allow common Render URL patterns
+if settings.ENVIRONMENT == "production":
+    allowed_origins.extend([
+        "https://*.onrender.com",
+    ])
+
+logger.info(f"CORS allowed origins: {allowed_origins}")
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:3000",  # Alternative dev port
-        "*"  # Allow all origins in development (restrict in production)
-    ],
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=False,  # Set to False to allow wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )

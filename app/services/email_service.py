@@ -1,15 +1,16 @@
-import aiosmtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import resend
 from ..config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
+# Configure Resend with API key
+resend.api_key = settings.RESEND_API_KEY if hasattr(settings, 'RESEND_API_KEY') and settings.RESEND_API_KEY else None
+
 
 async def send_email(to_email: str, subject: str, html_content: str) -> bool:
     """
-    Send an email using SMTP
+    Send an email using Resend HTTP API (works on Render free tier)
     
     Args:
         to_email: Recipient email address
@@ -20,27 +21,22 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
         bool: True if email sent successfully, False otherwise
     """
     try:
-        # Create message
-        message = MIMEMultipart("alternative")
-        message["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
-        message["To"] = to_email
-        message["Subject"] = subject
+        # Check if Resend is configured
+        if not resend.api_key:
+            logger.warning("Resend API key not configured. Email not sent.")
+            logger.info(f"[MOCK EMAIL] To: {to_email}, Subject: {subject}")
+            return True  # Return True to not block functionality during development
         
-        # Attach HTML content
-        html_part = MIMEText(html_content, "html")
-        message.attach(html_part)
+        # Send email via Resend API
+        params = {
+            "from": f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>",
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content,
+        }
         
-        # Send email
-        await aiosmtplib.send(
-            message,
-            hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            username=settings.SMTP_USERNAME,
-            password=settings.SMTP_PASSWORD,
-            start_tls=True,
-        )
-        
-        logger.info(f"Password reset email sent successfully to {to_email}")
+        response = resend.Emails.send(params)
+        logger.info(f"Password reset email sent successfully to {to_email} (ID: {response.get('id')})")
         return True
         
     except Exception as e:

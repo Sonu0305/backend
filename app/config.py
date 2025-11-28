@@ -8,11 +8,14 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
     
-    # SMTP Configuration
-    SMTP_HOST: str
-    SMTP_PORT: int
-    SMTP_USERNAME: str
-    SMTP_PASSWORD: str
+    # Email Configuration (Resend - HTTP API)
+    RESEND_API_KEY: Optional[str] = None
+    
+    # SMTP Configuration (Legacy - won't work on Render free tier)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
     SMTP_FROM_EMAIL: str
     SMTP_FROM_NAME: str = "Password Reset Service"
     
